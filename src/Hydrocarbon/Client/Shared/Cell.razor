@@ -1,0 +1,24 @@
+﻿<div class="border border-dotted dark:border-gray-700 dark:hover:border-gray-600 w-64 p-5" @onclick="OnPlace">
+    @if (ComponentType != null)
+    {
+        <DynamicComponent Type="ComponentType" Parameters="Parent.MapParameters[Id]"/>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+    public Type? ComponentType => Parent.Map.ContainsKey(Id) ? Parent.Map[Id] : null;
+
+    [CascadingParameter]
+    private Hydrocarbon.Client.Pages.Index Parent { get; set; }
+
+
+    [Parameter]
+    public EventCallback<Cell> OnCellClick { get; set; }
+    public async Task OnPlace()
+    {
+        await OnCellClick.InvokeAsync(this);
+       // StateHasChanged();
+    }
+}

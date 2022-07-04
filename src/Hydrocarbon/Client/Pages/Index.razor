@@ -1,0 +1,159 @@
+﻿@page "/"
+@using System.Reactive.Linq
+@using System.Reactive.Subjects
+
+<PageTitle>Hydrocarbon</PageTitle>
+
+<CascadingValue Value="this">
+    <div @onclick="Place" @onmousemove="MouseMove">
+
+        <div class="p-5 border border-dashed absolute @(_building ? "" : "invisible")" style="top: @(_top)px; left: @(_left)px">
+            @if (_buildType != null)
+            {
+                <DynamicComponent Type="_buildType" />
+            }
+        </div>
+
+        <div class="grid grid-cols-4 gap-4 h-screen">
+            <div class="col-span-1 border-r grid grid-flow-row auto-rows-max py-4 px-2 gap-2">
+                <div class="flex flex-col">
+                    <MkText Type="Typo.H4">Buttons</MkText>
+                    <Draggable OnClick="() => OnDrag(typeof(MkButton), _buttonParams)">
+                        <MkButton Color="MkColor.Primary" Css="border-4 border-dashed border-transparent hover:border-inherit">Primary</MkButton>
+                    </Draggable>
+                    <MkButton Color="MkColor.Secondary" Css="border-4 border-dashed border-transparent hover:border-inherit">Secondary</MkButton>
+                </div>
+                <div class="flex flex-col">
+                    <MkText Type="Typo.H4">Text</MkText>
+                    <Draggable OnClick="() => OnDrag(typeof(MkText), _textParams)">
+                        <MkText Type="Typo.H1" Css="m-0">H1</MkText>
+                    </Draggable>
+                    <Draggable>
+                        <MkText Type="Typo.H2">H2</MkText>
+                    </Draggable>
+                    <Draggable>
+                        <MkText Type="Typo.H3">H3</MkText>
+                    </Draggable>
+                    <Draggable OnClick="() => OnDrag(typeof(MkText), _textParams)">
+                        <MkText Type="Typo.H4">H4</MkText>
+                    </Draggable>
+                    <Draggable>
+                        <MkText Type="Typo.Body">Body</MkText>
+                    </Draggable>
+                </div>
+                <div class="flex flex-col">
+                    <MkText Type="Typo.H4">Text Fields</MkText>
+                    <Draggable OnClick="() => OnDrag(typeof(MkTextField), new Dictionary<string,object>())">
+                        <MkTextField Label="No label"></MkTextField>
+                    </Draggable>
+                    <Draggable OnClick="() => OnDrag(typeof(MkTextField), _labelParams)">
+                        <MkTextField Label="Standard label"></MkTextField>
+                    </Draggable>
+                    <Draggable OnClick="() => OnDrag(typeof(MkTextField), _floatingLabelParams)">
+                        <MkTextField Label="Floating label"></MkTextField>
+                    </Draggable>
+                </div>
+            </div>
+            <div class="col-span-3 p-4">
+                <div class="grid grid-cols-4 dark:text-gray-300 w-full">
+                    <div class="grid grid-flow-row auto-rows-max">
+                        <Cell Id="1" OnCellClick="OnPlace"></Cell>
+                        <Cell Id="2" OnCellClick="OnPlace"></Cell>
+                        <Cell Id="3" OnCellClick="OnPlace"></Cell>
+                    </div>
+                    <div class="grid grid-flow-row auto-rows-max">
+                        <Cell Id="4" OnCellClick="OnPlace"></Cell>
+                        <Cell Id="5" OnCellClick="OnPlace"></Cell>
+                        <Cell Id="6" OnCellClick="OnPlace"></Cell>
+                    </div>
+                    <div class="grid grid-flow-row auto-rows-max">
+                        <Cell Id="7" OnCellClick="OnPlace"></Cell>
+                        <Cell Id="8" OnCellClick="OnPlace"></Cell>
+                        <Cell Id="9" OnCellClick="OnPlace"></Cell>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</CascadingValue>
+
+@code {
+    private IDictionary<string, object> _textParams = new Dictionary<string, object>
+    {
+        {"Header", Typo.H4}
+    };
+
+    private IDictionary<string, object> _buttonParams = new Dictionary<string, object>
+    {
+        {"Color", MkColor.Primary }
+    };
+
+    private RenderFragment AddContent() => builder =>
+    {
+        builder.AddContent(1, "Header");
+    };
+
+    private IDictionary<string, object> _labelParams = new Dictionary<string, object>
+    {
+        {"Label", "Label"}
+    };
+
+    private IDictionary<string, object> _floatingLabelParams = new Dictionary<string, object>
+    {
+        {"Label", "Label"},
+        {"LabelType", MkLabelType.Floating }
+    };
+
+
+    private Subject<MouseEventArgs> location = new Subject<MouseEventArgs>();
+    private IObservable<MouseEventArgs> Location => location.AsObservable();
+    public Dictionary<int, Type> Map = new Dictionary<int, Type>();
+    public Dictionary<int, IDictionary<string, object>> MapParameters = new Dictionary<int, IDictionary<string, object>>();
+    private bool _building = false;
+    private Type _buildType = null;
+    private IDictionary<string, object> _buildParameters = new Dictionary<string, object>();
+    private int _top = 0;
+    private int _left = 0;
+    private Type? ComponentType { get; set; }
+
+    protected override void OnInitialized()
+    {
+        _textParams.Add("ChildContent", AddContent());
+
+        Location.Throttle(TimeSpan.FromMilliseconds(5)).Subscribe(p =>
+        {
+            _left = Convert.ToInt32(p.ClientX);
+            _top = Convert.ToInt32(p.ClientY);
+        });
+
+
+    }
+
+    public void OnDrag(Type type, IDictionary<string, object> parameters)
+    {
+        _building = true;
+        _buildType = type;
+        _buildParameters = parameters;
+    }
+
+    private void MouseMove(MouseEventArgs obj)
+    {
+        if (_building)
+        {
+            location.OnNext(obj);
+        }
+    }
+
+    private void OnPlace(Cell cell)
+    {
+        MapParameters[cell.Id] = _buildParameters;
+        Map[cell.Id] = _buildType;
+        StateHasChanged();
+    }
+
+    private void Place()
+    {
+        _building = false;
+    }
+
+}
